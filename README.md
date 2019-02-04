@@ -52,12 +52,14 @@ a Pivot Table showing the project role allocations.
   Either from the script editor ("Tools > Script Editor), or by adding a
   little bit of code to create a menu item, such as 
 
+```javascript
     function onOpen() {
       SpreadsheetApp.getUi()
          .createMenu('CUSTOM')
          .addItem('Project role alloc, 'onProjectRoleAlloc')
          .addToUi();
     }
+```
 
   The sheet names are declared at the end of the script in
 
@@ -129,11 +131,13 @@ In this example we show that projects can be grouped together into themes.
 
   Running `OnPivot.main()` generates a sheet called *role-alloc-raw* and
   the pivot table *role-alloc*.
-  
+
+```javascript
     onProjectRoleAlloc.main(srcColumnLabels = ["Project*", "Username", "Role" ],
                             srcSheetName = "persons",
                             pvtSheetName = "role-alloc",
                             theSheetName = "themes");
+```
 
 ### Intermetiate output
 
