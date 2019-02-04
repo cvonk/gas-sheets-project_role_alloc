@@ -21,24 +21,24 @@ In the first example, we start with a sheet containing the project names, users 
 ### Input
 
 Starting with the projects names, users and their roles in sheet *persons*.  Note that multiple projects may be assigned to a single `username`.
-  
-  | Username | Role    | Type      | Project 1 | Project 2 |
-  | -------- | ------- | --------- | --------- | --------- |
-  | jvonk    | Student | person    | School    | Java      |  
-  | svonk    | Student | person    | School    | Reading   |
-  | brlevins | Adult   | person    | BoBo      |           |  
-  | tiger    | Pet     | cat       | Purr      |           |
-  | ownen    | Pet     | cat       | Sleep     | Purr      |
+
+| Username | Preferred Name | Person Type | Role    | Project 1 | Project 2 |
+| -------- | -------------- | ----------- | ------- | --------- | --------- |
+| jvonk    | Johan          | Employee    | Student | School    | Java      |
+| svonk    | Sander         | Employee    | Student | Reading   | School    |
+| brlevins | Barrie         | Employee    | Adult   | BoBo      |           |
+| tiger    | Tiger          | Cat         | Pet     | Purr      |           |
+| owen     | Owen           | Cat         | Pet     | Purr      | Sleep     |
 
 ### Filter
 
-  Filter out the people using `Data > Create a Filter > filter on Type == person`
+  Filter out the people using `Data > Create a Filter > filter` to filter on `Person Type == Employee`
 
-  | Username | Role    | Type      | Project 1 | Project 2 |
-  | -------- | ------- | --------- | --------- | --------- |
-  | jvonk    | Student | person    | School    | Java      |  
-  | svonk    | Student | person    | School    | Reading   |
-  | brlevins | Adult   | person    | BoBo      |           |  
+| Username | Preferred Name | Person Type | Role    | Project 1 | Project 2 |
+| -------- | -------------- | ----------- | ------- | --------- | --------- |
+| jvonk    | Johan          | Employee    | Student | School    | Java      |
+| svonk    | Sander         | Employee    | Student | Reading   | School    |
+| brlevins | Barrie         | Employee    | Adult   | BoBo      |           |
   
 ### Run the script
 
@@ -74,16 +74,14 @@ Starting with the projects names, users and their roles in sheet *persons*.  Not
 ### Intermetiate output
 
   Underwater, the script creates a sheet that forms the raw input for the Pivot
-  Table (*role-alloc-raw*).  If the sheet already exist, it will 
-  reuse it.
+  Table (*role-alloc-raw*).  If the sheet already exist, it will reuse it.
 
   | Project  | Username | Role    | Ratio |
   | -------- | -------- | ------- | ----- |
   | School   | jvonk    | Student | 0.5   | 
   | Java     | jvonk    | Student | 0.5   | 
-  | School   | svonk    | Student | 0.5   | 
   | Reading  | svonk    | Student | 0.5   |
-  | All else | cvonk    | Adult   | 1.0   |
+  | School   | svonk    | Student | 0.5   | 
   | BoBo     | brlevins | Adult   | 0.5   |
 
 ### Output
@@ -105,13 +103,13 @@ In this example we show that projects can be grouped together into themes.
 
 ### Input
 
-  Starting with the projects names, users and their roles in sheet *persons*
-  
-  | Username | Role    | Type      | Project 1 | Project 2 |
-  | -------- | ------- | --------- | --------- | --------- |
-  | jvonk    | Student | person    | School    | Java      |  
-  | svonk    | Student | person    | School    | Reading   |
-  | brlevins | Adult   | person    | BoBo      |           |  
+  Starting with the same filtered input from the first example in sheet *persons*
+ 
+| Username | Preferred Name | Person Type | Role    | Project 1 | Project 2 |
+| -------- | -------------- | ----------- | ------- | --------- | --------- |
+| jvonk    | Johan          | Employee    | Student | School    | Java      |
+| svonk    | Sander         | Employee    | Student | Reading   | School    |
+| brlevins | Barrie         | Employee    | Adult   | BoBo      |           |
 
 ### Themes
 
@@ -121,16 +119,13 @@ In this example we show that projects can be grouped together into themes.
   | -------- | ------ |
   | School   | Study  |
   | Java     | Study  |
-  | Laundry  | Chores | 
-  | All else | Chores |
   | Chef     | Chores |
   | Reading  | Relax  |
   | BoBo     | Work   |
 
 ### Run the script
 
-  Running `OnPivot.main()` generates a sheet called *role-alloc-raw* and
-  the pivot table *role-alloc*.
+  This time, we give the `OnPivot.main()` an extra parameter specifying the *themes* sheet name.
 
 ```javascript
     onProjectRoleAlloc.main(srcColumnLabels = ["Project*", "Username", "Role" ],
@@ -141,22 +136,21 @@ In this example we show that projects can be grouped together into themes.
 
 ### Intermetiate output
 
-  Underwater, the script creates a sheet that forms the raw input for the Pivot
-  Table (*role-alloc-raw*)
+  The sheet that forms the raw input for the Pivot Table (*role-alloc-raw*), now starts with
+  the column `Theme`.
 
-  | Theme  | Project  | Username | Role    | Ratio |
-  | ------ | -------- | -------- | ------- | ----- |
-  | Study  | School   | jvonk    | Student | 0.5   | 
-  | Study  | Java     | jvonk    | Student | 0.5   | 
-  | Study  | School   | svonk    | Student | 0.5   | 
-  | Relax  | Reading  | svonk    | Student | 0.5   |
-  | Chores | All else | cvonk    | Adult   | 1.0   |
-  | Work   | BoBo     | brlevins | Adult   | 0.5   |
-  | Chores | Chef     | brlevins | Adult   | 0.5   |
+  | Theme    | Project  | Username | Role    | Ratio |
+  | -------- | -------- | -------- | ------- | ----- |
+  | Study    | School   | jvonk    | Student | 0.5   | 
+  | Study    | Java     | jvonk    | Student | 0.5   | 
+  | Relax    | Reading  | svonk    | Student | 0.5   |
+  | Study    | School   | svonk    | Student | 0.5   | 
+  | Work     | BoBo     | brlevins | Adult   | 0.5   |
+
 
 ### Output
 
-  The script creates a project role allocation pivot table (*role-alloc*)
+  The script creates a project role allocation Pivot Table (*role-alloc*)
 
   | Theme   | Project | Username | Student | Adult |
   | ------- | ------- | -------- | ------- | ----- |
