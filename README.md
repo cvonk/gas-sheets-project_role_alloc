@@ -54,7 +54,8 @@ a Pivot Table showing the project role allocations.
 
 ```javascript
     function onOpen() {
-      SpreadsheetApp.getUi().createMenu("CUSTOM")
+      SpreadsheetApp.getUi()
+         .createMenu("CUSTOM")
          .addItem("Project role alloc", "onProjectRoleAlloc").addToUi();
     }
 ```
