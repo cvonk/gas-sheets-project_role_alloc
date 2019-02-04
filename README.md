@@ -54,18 +54,18 @@ a Pivot Table showing the project role allocations.
 
 ```javascript
     function onOpen() {
-      SpreadsheetApp.getUi()
-         .createMenu('CUSTOM')
-         .addItem('Project role alloc, 'onProjectRoleAlloc')
-         .addToUi();
+      SpreadsheetApp.getUi().createMenu("CUSTOM")
+         .addItem("Project role alloc, "onProjectRoleAlloc").addToUi();
     }
 ```
 
   The sheet names are declared at the end of the script in
 
+```javascript
     onProjectRoleAlloc.main(srcColumnLabels = ["Project*", "Username", "Role" ],
                             srcSheetName = "persons",
                             pvtSheetName = "role-alloc");
+```
 
   The `srcColumnLabels` uses a wildchard in `Projects*` to indicate that all
   columns starting with `Projects` should be considered.
