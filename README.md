@@ -1,4 +1,4 @@
-# gas-sheets-projectrolealloc
+# Google Apps Script - Project Role Allocations
 
 Create project role allocation pivot table based on projects names, users and their roles.
 
