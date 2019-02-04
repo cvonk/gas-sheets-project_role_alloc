@@ -1,4 +1,4 @@
-# Google Apps Script - Project Role Allocations
+# Project Role Allocations (Google Apps Script)
 
 Create project role allocation pivot table based on projects names, users and their roles.
 
