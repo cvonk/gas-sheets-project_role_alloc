@@ -63,21 +63,24 @@ a Pivot Table showing the project role allocations.
   The sheet names are declared at the end of the script in
 
 ```javascript
-    onProjectRoleAlloc.main(srcColumnLabels = ["Project*", "Username", "Role" ],
-                            srcSheetName = "persons",
-                            pvtSheetName = "role-alloc");
+    function onProjectRoleAlloc() {
+      OnProjectRoleAlloc.main(srcColumnLabels = ["Project*", "Username", "Role" ],
+                              srcSheetName = "persons",
+                              pvtSheetName = "role-alloc");
+    }
 ```
 
   The `srcColumnLabels` uses a wildchard in `Projects*` to indicate that all
   columns starting with `Projects` should be considered.
 
-  Running `OnPivot.main()` generates a sheet called *role-alloc-raw* and
+  Running `onProjectRoleAlloc()` generates a sheet called *role-alloc-raw* and
   the pivot table *role-alloc*.
   
 ### Intermetiate output
 
   Underwater, the script creates a sheet that forms the raw input for the Pivot
-  Table (*role-alloc-raw*)
+  Table (*role-alloc-raw*).  If the sheet already exist, it will 
+  reuse it.
 
   | Project  | Username | Role    | Ratio |
   | -------- | -------- | ------- | ----- |
@@ -90,7 +93,8 @@ a Pivot Table showing the project role allocations.
 
 ### Output
 
-  The script creates a project role allocation Pivot Table (*role-alloc*)
+  The script creates a project role allocation Pivot Table (*role-alloc*). If the 
+  sheet already exist, it will preserve the formatting and only update its datarange.
 
   | Project | Username | Student | Adult |
   | ------- | -------- | ------- | ----- |
