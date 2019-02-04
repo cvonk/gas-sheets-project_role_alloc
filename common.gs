@@ -42,7 +42,7 @@ var Common = {};
 
   this.spreadsheetOpenById = function(spreadsheetId) {
 
-    var spreadsheet = SpreadsheetApp.open(spreadsheetId);
+    var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     if (spreadsheet == undefined) {
         throw "Spreadsheet \"" + spreadsheetId + "\" not found";
       return undefined;
