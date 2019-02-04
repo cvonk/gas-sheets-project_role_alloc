@@ -12,7 +12,7 @@ script [gas-sheets-merge](https://github.com/cvonk/gas-sheets-merge).
 ## Dependencies
 
 This script requires the Sheets API. Failure to enable the API / list it as a resource in the script editor causes the error `Reference error: Sheets is not defined`).  To enable the API and use it, refer to [stackoverflow](https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined).
-This API has a default quota of 100 reads/day. After that it throws a meaningless error message such as `Internal Error` near `Sheets.Spreadsheets.get()`.
+This API has a default quota of 100 reads/day. After that it throws a meaningless error message such as `Internal Error Encountered` on the line with `Sheets.Spreadsheets.get()`.
 
 ## Example 1
 
