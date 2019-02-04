@@ -68,6 +68,8 @@ Starting with the projects names, users and their roles in sheet *persons*.  Not
 
   Running `onProjectRoleAlloc()` generates a sheet called *role-alloc-raw* and
   the pivot table *role-alloc*.
+
+  The script will not include the lines that are hidden by the filter.
   
 ### Intermetiate output
 
