@@ -11,11 +11,12 @@ script [gas-sheets-merge](https://github.com/cvonk/gas-sheets-merge).
 
 ## Dependencies
 
-Requires the Sheets API (otherwise you get: Reference error: Sheets is not
-defined).  To enable the API, refer to [stackoverflow](https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined).
+This script requires the Sheets API (otherwise you get: `Reference error: Sheets is not
+defined`).  To enable the API, refer to 
+[stackoverflow](https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined).
   
 Note that this API has a default quota of 100 reads/day, after that it 
-throws an "Internal Error".
+throws a meaningless error message such as `Internal Error`.
 
 ## Example 1
 
