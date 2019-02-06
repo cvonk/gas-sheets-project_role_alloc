@@ -248,39 +248,33 @@ var OnProjectRoleAlloc = {};
 
   this.updatePivotTable = function(spreadsheet, rawSheet, pvtSheet) {
 
-    var pivotTableSheetId = pvtSheet.getSheetId();
+    var pvtTableSheetId = pvtSheet.getSheetId();
 
     // https://sites.google.com/site/scriptsexamples/learn-by-example/google-sheets-api/pivot
     // instead of supplying a whole new pivot table, use the API to get the configuration
     // of the exising Pivot Table, and update the source range
-    //var fields = "sheets(properties.sheetId,data.rowData.values.pivotTable)";
-    var fields = "sheets(properties/sheetId,data/rowData/values/pivotTable)";
+    //    
+    var fields = "sheets(properties.sheetId,data.rowData.values.pivotTable)";
     try {
-      var response = Sheets.Spreadsheets.get(spreadsheet.getId(), {fields: fields});
+      var response = Sheets.Spreadsheets.get(spreadsheet.getId(), {ranges: "role-alloc", fields: fields});
     } catch (e) {
-      if (response == undefined) {  // Internal Error? > you exceeded your quota (dlt 100 reads/day)
+      if (response == undefined) {  // Internal Error? > you exceeded your quota? (dflt 100 reads/day)
         throw("Google Sheets API read quota exceeded");
       }
     }
     
-    var sheets = response.sheets; 
-    for (var i in sheets) {
-      if (sheets[i].properties.sheetId == pivotTableSheetId) {
-        var pivotTableParams = sheets[i].data[0].rowData[0].values[0].pivotTable;
-        break;
-      }
-    }
-    pivotTableConfig.source.endRowIndex = rawSheet.getDataRange().getNumRows();
+    var cfg = sheets[ii].data[0].rowData[0].values[0].pivotTable;
+    cfg.source.endRowIndex = rawSheet.getDataRange().getNumRows();
 
     var request = {
       "updateCells": {
         "rows": {
           "values": [{
-            "pivotTable": pivotTableConfig
+            "pivotTable": cfg
           }]
         },
         "start": {
-          "sheetId": pivotTableSheetId
+          "sheetId": pvtTableSheetId
         },
         "fields": "pivotTable"
       }
