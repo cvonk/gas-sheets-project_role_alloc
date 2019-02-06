@@ -173,7 +173,8 @@ var OnProjectRoleAlloc = {};
 
   this.getPivotTabelConfig = function(rawSheet, srcColumnLabels) {
     
-    var pivotTblConfig = {
+    // API details at https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/pivot-tables
+    var cfg = {
       "source": {
         sheetId: rawSheet.getSheetId(),
         endRowIndex: rawSheet.getDataRange().getNumRows(),
@@ -182,11 +183,13 @@ var OnProjectRoleAlloc = {};
       "rows": [{
         sourceColumnOffset: 0,
         showTotals: true,
+        //valueBucket: {}
+        //label: "Something else instead of Theme",
         sortOrder: "ASCENDING" /*,
         valueMetadata: [{
           "value": { "formulaValue": "true" },   // 2BD
           "collapsed": true
-        }] */
+        }] */        
       }],
       "columns": [],
       "values": [{
@@ -198,29 +201,29 @@ var OnProjectRoleAlloc = {};
     for (var ii = 1; ii <= srcColumnLabels.length; ii++) {
       switch (ii) {
         case srcColumnLabels.length:
-          pivotTblConfig.columns.push({
+          cfg.columns.push({
             sourceColumnOffset: ii,
             showTotals: true,
             sortOrder: "ASCENDING"
           });
           break;
         default:
-          pivotTblConfig.rows.push({
+          cfg.rows.push({
             sourceColumnOffset: ii,
             showTotals: true,
             sortOrder: "ASCENDING"
           });
       }
     }
-    return pivotTblConfig;
+    return cfg;
   }    
 
-  this.pivotTableUpdate = function(pivotTblConfig, pivotTblSheet, spreadsheet) {
+  this.pivotTableUpdate = function(cfg, pivotTblSheet, spreadsheet) {
     var request = {
       "updateCells": {
         "rows": {
           "values": [{
-            "pivotTable": pivotTblConfig
+            "pivotTable": cfg
           }]
         },
         "start": {
@@ -240,10 +243,10 @@ var OnProjectRoleAlloc = {};
       return;
     }
     
-    var pivotTblConfig = this.getPivotTabelConfig(rawSheet, srcColumnLabels);
+    var cfg = this.getPivotTabelConfig(rawSheet, srcColumnLabels);
     var pivotTblSheet = spreadsheet.insertSheet(pvtSheetName);
 
-    return this.pivotTableUpdate(pivotTblConfig, pivotTblSheet, spreadsheet);
+    return this.pivotTableUpdate(cfg, pivotTblSheet, spreadsheet);
   }
 
   this.updatePivotTable = function(spreadsheet, rawSheet, pvtSheet) {
@@ -263,7 +266,7 @@ var OnProjectRoleAlloc = {};
       }
     }
     
-    var cfg = sheets[ii].data[0].rowData[0].values[0].pivotTable;
+    var cfg = response.sheets[0].data[0].rowData[0].values[0].pivotTable;
     cfg.source.endRowIndex = rawSheet.getDataRange().getNumRows();
 
     var request = {
