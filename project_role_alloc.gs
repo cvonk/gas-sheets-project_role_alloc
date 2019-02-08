@@ -51,49 +51,63 @@
 
 var OnProjectRoleAlloc = {};
 (function () {
-
-  // create an associative array that maps the "column label" to the
-  // "column index" in the src
+  
+  // create an associative array that maps the "column label" to the "column index" in the src
   //   key = the column label,
   //   value = the index of the column with that label in the src
-  // note: when a "column label" ends in '*', it matches any column that
-  // starts with that label
-
-  this.getSrcColumns = function(srcColumnLabels, srcHeader) {
-
+  // note: when a "column label" ends in '*', it matches any column that starts with that label
+  // e.g.
+  //   labels = ["Project Allocation*", "Username", "Role"]
+  //   srcHeader = ["Username", "Preferred Name", "Person Type", "Role", "Project Allocation 1", "Project Allocation 1 %", "Project Allocation 2"]
+  // will output
+  //   // [{label:"Project Allocation", src:[4, 5]}, {label:"Username", src:[0]}, {label:"Role", src:[3]}]
+  //   [{label:"Project Allocation", idx:[{val:4, pct:5}, {val:6, pct:-1}]}, {label:"Username", idx:[{val:0, pct:-1}]}, {label:"Role", idx:[{val:3, pct:-1}]}]
+  
+  this.getSrcColumns = function(labels, srcHeader) {
+    
+    String.prototype.startsWith = function(prefix) { 
+      return this.indexOf(prefix) === 0; 
+    } 
+    String.prototype.endsWith = function(suffix) { 
+      return this.match(suffix+"$") == suffix; 
+    };    
+    
     var srcColumns = [];
-    var rawColIdx = 0;
-
-    for each (var label in srcColumnLabels) {
-
-      var matches = [label];
-      var wildchard = label.substr(-1) == "*";
-      if (wildchard) {
+    var percentageStr = " %";
+    
+    for each (var label in labels) {
+      
+      if (label.substr(-1) == "*") {
         label = label.slice(0, -1).trim();
-        var matches = srcHeader.filter(function(value, index) {
-          return value.indexOf(label) === 0;
-        });
       }
+      var valueLabels = srcHeader.filter(function(srcLabel) {
+        return srcLabel.startsWith(label) && !srcLabel.endsWith(percentageStr);
+      });
       var srcColIdx = [];
-      for each (var sublabel in matches) {
-        srcColIdx.push(srcHeader.indexOf(sublabel));
+      for each (var valueLabel in valueLabels) {
+        srcColIdx.push({val:srcHeader.indexOf(valueLabel), pct:srcHeader.indexOf(valueLabel + percentageStr)});
       };
-      srcColumns.push({label: label, src: srcColIdx });
+      srcColumns.push({label: label, idx:srcColIdx});
     }
     return srcColumns;
   }
-
-  // recusively walk the src columns to determine the actions needed to create the Raw Sheet
-
+  
+  // recusively walk the Src Columns to determine the actions needed to create the Raw Sheet
+  // e.g. at the root level
+  //  srcColumns = [{label:"Project Allocation", idx:[{val:4, pct:5}, {val:6, pct:-1}]}, {label:"Username", idx:[{val:0, pct:-1}]}, {label:"Role", idx:[{val:3, pct:-1}]}]
+  //  action = []
+  //  actions = []
+  // will output [[{val:4, pct:5}, {val:0, pct:-1}, {val:3, pct:-1}], [{val:6, pct:-1}, {}, {}]]
+  //   
   this.walkSrcColumns = function(srcColumns, action, actions) {
 
     if (srcColumns.length == 0) {
       actions.push(action);
       return;
     }
-    for each (var src in srcColumns[0].src) {
+    for each (var idx in srcColumns[0].idx) {
       var actioncopy = action.slice();
-      actioncopy.push(src);
+      actioncopy.push(idx);
       this.walkSrcColumns(srcColumns.slice(1), actioncopy, actions);
     }
     return actions;
@@ -117,49 +131,11 @@ var OnProjectRoleAlloc = {};
     if (theValues != undefined) {
       row.push("Theme");
     }
+    row.push("Ratio");  // 2BD should be hardcoded here, but depend on something like actionLvlHasAssignedPercentages
     for each (var column in srcColumns) {
       row.push(column.label);
     }
-    row.push("Ratio");  // end with Project Allocation column */
     lines.push(row);
-  }
-
-  this.writeRawValues = function(lines, srcValues, actions) {
-
-    var rowNr = 1;
-    for each (var srcRow in srcValues) {
-      for each (var action in actions) {
-        var row = [undefined];
-        for each (var src in action) {
-          row.push(srcRow[src]);
-        }
-        if (Common.arrayHasNoEmptyEl(row)) {
-          row.push(1);
-          lines.push(row);
-          var usernameColIdx = lines[0].indexOf("Username");
-          var usernameColLetter = String.fromCharCode(65 + usernameColIdx);
-          rowNr++;
-        }
-      }
-    }
-  }
-
-  // if users work on >1 prject, divvy up their allocation evenly, except when
-  // project name ends in e..g "(75%)", then 75% will be allocated to that
-  // one project and the remainder spread evenly amoung other projects.
-  // removes the allocation percentage from prjName as well.
-
-  this.getAssignedAllocation = function(line, uname, prjName, prjColIdx) {
-    
-    var openBracket = prjName.lastIndexOf("(");
-    
-    if (prjName.substr(-2) == "%)" && openBracket > 0) {        
-      var newPrjName = prjName.substr(0, openBracket-1);  // remove e.g. "(45%)"
-      var str = prjName.substr(openBracket+1, prjName.length - openBracket - 3);
-      //line[prjColIdx] = newPrjName;
-      return [newPrjName, parseInt(str) / 100.0];
-    }
-    return [prjName, undefined];
   }
 
   // returns the ratio of time that a user spends on a specific project
@@ -183,6 +159,26 @@ var OnProjectRoleAlloc = {};
     return (1 - prjAssVal) / (prjCnt - prjAssCnt);
   }
   
+  
+  // if users work on >1 prject, divvy up their allocation evenly, except when
+  // project name ends in e..g "(75%)", then 75% will be allocated to that
+  // one project and the remainder spread evenly amoung other projects.
+  // removes the allocation percentage from prjName as well.
+
+  this.getAssignedAllocation = function(line, uname, prjName, prjColIdx) {
+    
+    var openBracket = prjName.lastIndexOf("(");
+    
+    if (prjName.substr(-2) == "%)" && openBracket > 0) {        
+      var newPrjName = prjName.substr(0, openBracket-1);  // remove e.g. "(45%)"
+      var str = prjName.substr(openBracket+1, prjName.length - openBracket - 3);
+      //line[prjColIdx] = newPrjName;
+      return [newPrjName, parseInt(str) / 100.0];
+    }
+    return [prjName, undefined];
+  }
+
+
   this.writeRawAllocColumn = function(lines) {
     
     // 2BD no literal column names
@@ -218,6 +214,84 @@ var OnProjectRoleAlloc = {};
     }
   }
 
+  
+  // e.g.
+  //   lines = [["Theme", "Project Allocation", "Username", "Role", "Ratio"]]
+  //   srcValues = [["jvonk", "Johan Vonk", "Employee", "Student", "School", 0.8, "Java"], ["svonk", "Sander Vonk", "Employee", "Student", "School", "", "Reading"], ["brlevins", "Barrie Levinson", "Employee", "Adult"...
+  //   actions = [[{val:4, pct:5}, {val:0, pct:-1}, {val:3, pct:-1}], [{val:6, pct:-1}, {}, {}]]
+  // returns updated lines
+  //   lines = 
+  this.writeRawValues = function(lines, srcValues, actions) {
+
+    // see if any action has percentages assigned
+    
+    var actionLvlHasAssignedPercentages = [];    
+    for each (var srcRow in srcValues) {
+      for each (var action in actions) {  
+        var actionLvl = 0;
+        for each (var idx in action) {
+          if (idx.pct >= 0 && srcRow[idx.pct]) {
+            actionLvlHasAssignedPercentages.push(actionLvl);
+          }
+          actionLvl++;
+        }
+      }
+    }
+        
+    var rowNr = 1;
+    for each (var srcRow in srcValues) {
+
+     var ratioColIdx = lines[0].indexOf("Ratio");
+      
+      for each (var action in actions) {
+        var row = [,];
+        var alloc = 1;
+        
+        var idxNr = 0;
+        for each (var idx in action) {
+
+          var assignedCnt = 0, assignedVal = 0, totalCnt = 0;
+          for each (var act in actions) {        
+            if (act[idxNr].pct >= 0) {
+              var val = srcRow[act[idxNr].pct];
+              if (val) { // skip blank
+                assignedCnt++;
+                assignedVal += val;
+                if (assignedVal > 1) {
+                  throw("over 100% assigned for (" + srcRow[0]  + ")");
+                }
+              }
+            }
+            if (srcRow[act[idxNr].val]) {
+              totalCnt++; // only count the columns with values
+            }
+          }
+          
+          // should really write whenever any >= 0
+          
+          var ratio = 1.0 / totalCnt;
+          if (assignedCnt > 0) {
+            if (idx.pct >= 0) {
+              ratio = srcRow[idx.pct];
+            } else {
+              ratio = (1 - assignedVal) / (totalCnt - assignedCnt);
+            }            
+          }
+          if( actionLvlHasAssignedPercentages.indexOf(idxNr) >= 0) {
+            row.push(Number(ratio.toFixed(2)));  // hide math precision err
+          }
+          row.push(srcRow[idx.val]);
+          idxNr++;
+        }
+        if (row[2]) {        // 2BD shouldnt be hardcoded
+          lines.push(row);
+          rowNr++;
+        }
+      }
+    }
+    return;
+  }
+  
   this.writeRawThemeColumn = function(lines, theValues) {
 
     if (theValues == undefined) {
@@ -229,7 +303,7 @@ var OnProjectRoleAlloc = {};
     for (var ii = 1; ii < lines.length; ii++) {
       var line = lines[ii];
       var prjTheme = this.getTheme(theValues, line[prjColIdx]);
-      line[theColIdx] = prjTheme;
+      lines[ii][theColIdx] = prjTheme;
     }
   }
   
@@ -238,7 +312,7 @@ var OnProjectRoleAlloc = {};
     var lines = [];
     this.writeRawHeader(lines, theValues, srcColumns);
     this.writeRawValues(lines, srcValues, actions);
-    this.writeRawAllocColumn(lines);
+    //this.writeRawAllocColumn(lines);
     this.writeRawThemeColumn(lines, theValues);
     
     rawSheet.getRange(1, 1, lines.length, lines[0].length).setValues(lines);
@@ -261,7 +335,7 @@ var OnProjectRoleAlloc = {};
       }],
       "columns": [],
       "values": [{
-        sourceColumnOffset: srcColumnLabels.length + 1,
+        sourceColumnOffset: 1,   // 2BD not hardcoded
         summarizeFunction: "SUM"
       }]
     };
@@ -270,14 +344,14 @@ var OnProjectRoleAlloc = {};
       switch (ii) {
         case srcColumnLabels.length:
           cfg.columns.push({
-            sourceColumnOffset: ii,
+            sourceColumnOffset: ii + 1,
             showTotals: true,
             sortOrder: "ASCENDING"
           });
           break;
         default:
           cfg.rows.push({
-            sourceColumnOffset: ii,
+            sourceColumnOffset: ii + 1,
             showTotals: true,
             sortOrder: "ASCENDING"
           });
