@@ -22,23 +22,23 @@ In the first example, we start with a sheet containing the project names, users 
 
 Starting with the projects names, users and their roles in sheet *persons*.  Note that multiple projects may be assigned to a single `username`.
 
-| Username | Preferred Name | Person Type | Role    | Project 1 | Project 2 |
-| -------- | -------------- | ----------- | ------- | --------- | --------- |
-| jvonk    | Johan          | Employee    | Student | School    | Java      |
-| svonk    | Sander         | Employee    | Student | Reading   | School    |
-| brlevins | Barrie         | Employee    | Adult   | BoBo      |           |
-| tiger    | Tiger          | Cat         | Pet     | Purr      |           |
-| owen     | Owen           | Cat         | Pet     | Purr      | Sleep     |
+| Username | Preferred Name | Person Type | Role    | Project Allocation 1 | Project Allocation 2 |
+| -------- | -------------- | ----------- | ------- | -------------------- | -------------------- |
+| jvonk    | Johan          | Employee    | Student | School               | Java                 |
+| svonk    | Sander         | Employee    | Student | Reading              | School               |
+| brlevins | Barrie         | Employee    | Adult   | BoBo                 |                      |
+| tiger    | Tiger          | Cat         | Pet     | Purr                 |                      |
+| owen     | Owen           | Cat         | Pet     | Purr                 | Sleep                |
 
 ### Filter
 
   Filter out the people using `Data > Create a Filter > filter` to filter on `Person Type == Employee`
 
-| Username | Preferred Name | Person Type | Role    | Project 1 | Project 2 |
-| -------- | -------------- | ----------- | ------- | --------- | --------- |
-| jvonk    | Johan          | Employee    | Student | School    | Java      |
-| svonk    | Sander         | Employee    | Student | Reading   | School    |
-| brlevins | Barrie         | Employee    | Adult   | BoBo      |           |
+| Username | Preferred Name | Person Type | Role    | Project Allocation 1 | Project Allocation 2 |
+| -------- | -------------- | ----------- | ------- | -------------------- | -------------------- |
+| jvonk    | Johan          | Employee    | Student | School               | Java                 |
+| svonk    | Sander         | Employee    | Student | Reading              | School               |
+| brlevins | Barrie         | Employee    | Adult   | BoBo                 |                      |
   
 ### Run the script
 
@@ -76,26 +76,26 @@ Starting with the projects names, users and their roles in sheet *persons*.  Not
   Underwater, the script creates a sheet that forms the raw input for the Pivot
   Table (*role-alloc-raw*).  If the sheet already exist, it will reuse it.
 
-  | Project  | Username | Role    | Ratio |
-  | -------- | -------- | ------- | ----- |
-  | School   | jvonk    | Student | 0.5   | 
-  | Java     | jvonk    | Student | 0.5   | 
-  | Reading  | svonk    | Student | 0.5   |
-  | School   | svonk    | Student | 0.5   | 
-  | BoBo     | brlevins | Adult   | 0.5   |
+  | Project Allocation | Username | Role    | Ratio |
+  | ------------------ | -------- | ------- | ----- |
+  | School             | jvonk    | Student | 0.5   | 
+  | Java               | jvonk    | Student | 0.5   | 
+  | Reading            | svonk    | Student | 0.5   |
+  | School             | svonk    | Student | 0.5   | 
+  | BoBo               | brlevins | Adult   | 0.5   |
 
 ### Output
 
   The script creates a project role allocation Pivot Table (*role-alloc*). If the 
   sheet already exist, it will preserve the formatting and only update its datarange.
 
-  | Project | Username | Student | Adult |
-  | ------- | -------- | ------- | ----- |
-  | School  | jvonk    | 0.5     |       |
-  |         | svonk    | 0.5     |       |
-  | Java    | jvonk    | 0.5     |       |
-  | Reading | svonk    | 0.5     |       |
-  | BoBo    | brlevins |         | 1.0   |
+  | Project Allocation | Username | Student | Adult |
+  | ------------------ | -------- | ------- | ----- |
+  | School             | jvonk    | 0.5     |       |
+  |                    | svonk    | 0.5     |       |
+  | Java               | jvonk    | 0.5     |       |
+  | Reading            | svonk    | 0.5     |       |
+  | BoBo               | brlevins |         | 1.0   |
   
 ## Example 2
 
@@ -105,23 +105,23 @@ In this example we show that projects can be grouped together into themes.
 
   Starting with the same filtered input from the first example in sheet *persons*
  
-| Username | Preferred Name | Person Type | Role    | Project 1 | Project 2 |
-| -------- | -------------- | ----------- | ------- | --------- | --------- |
-| jvonk    | Johan          | Employee    | Student | School    | Java      |
-| svonk    | Sander         | Employee    | Student | Reading   | School    |
-| brlevins | Barrie         | Employee    | Adult   | BoBo      |           |
+| Username | Preferred Name | Person Type | Role    | Project Allocation 1 | Project Allocation 2 |
+| -------- | -------------- | ----------- | ------- | -------------------- | -------------------- |
+| jvonk    | Johan          | Employee    | Student | School               | Java                 |
+| svonk    | Sander         | Employee    | Student | Reading              | School               |
+| brlevins | Barrie         | Employee    | Adult   | BoBo                 |                      |
 
 ### Themes
 
   The projects are grouped into themes using the sheet *themes*
   
-  | Project  | Theme  |
-  | -------- | ------ |
-  | School   | Study  |
-  | Java     | Study  |
-  | Chef     | Chores |
-  | Reading  | Relax  |
-  | BoBo     | Work   |
+  | Project Allocation | Theme  |
+  | ------------------ | ------ |
+  | School             | Study  |
+  | Java               | Study  |
+  | Chef               | Chores |
+  | Reading            | Relax  |
+  | BoBo               | Work   |
 
 ### Run the script
 
@@ -139,23 +139,37 @@ In this example we show that projects can be grouped together into themes.
   The sheet that forms the raw input for the Pivot Table (*role-alloc-raw*), now starts with
   the column `Theme`.
 
-  | Theme    | Project  | Username | Role    | Ratio |
-  | -------- | -------- | -------- | ------- | ----- |
-  | Study    | School   | jvonk    | Student | 0.5   | 
-  | Study    | Java     | jvonk    | Student | 0.5   | 
-  | Relax    | Reading  | svonk    | Student | 0.5   |
-  | Study    | School   | svonk    | Student | 0.5   | 
-  | Work     | BoBo     | brlevins | Adult   | 0.5   |
+  | Theme    | Project Allocation  | Username | Role    | Ratio |
+  | -------- | ------------------- | -------- | ------- | ----- |
+  | Study    | School              | jvonk    | Student | 0.5   | 
+  | Study    | Java                | jvonk    | Student | 0.5   | 
+  | Relax    | Reading             | svonk    | Student | 0.5   |
+  | Study    | School              | svonk    | Student | 0.5   | 
+  | Work     | BoBo                | brlevins | Adult   | 0.5   |
 
 
 ### Output
 
   The script creates a project role allocation Pivot Table (*role-alloc*)
 
-  | Theme   | Project | Username | Student | Adult |
-  | ------- | ------- | -------- | ------- | ----- |
-  | Study   | School  | jvonk    | 0.5     |       |
-  |         |         | svonk    | 0.5     |       |
-  |         | Java    | jvonk    | 0.5     |       |
-  | Relax   | Reading | svonk    | 0.5     |       |
-  | Work    | BoBo    | brlevins |         | 1.0   |
+  | Theme   | Project Allocation | Username | Student | Adult |
+  | ------- | ------------------ | -------- | ------- | ----- |
+  | Study   | School             | jvonk    | 0.5     |       |
+  |         |                    | svonk    | 0.5     |       |
+  |         | Java               | jvonk    | 0.5     |       |
+  | Relax   | Reading            | svonk    | 0.5     |       |
+  | Work    | BoBo               | brlevins |         | 1.0   |
+
+## Example 3
+
+This example extends the previous example by allowing allocation percentages in the input
+
+### Input
+
+  Starting with the same filtered input from the first example in sheet *persons*
+ 
+| Username | Preferred Name | Person Type | Role    | Project Allocation 1 | Project Allocation 1 % | Project Allocation 2 |
+| -------- | -------------- | ----------- | ------- | -------------------- | ---------------------- | -------------------- |
+| jvonk    | Johan          | Employee    | Student | School               | **80%**                | Java                 |
+| svonk    | Sander         | Employee    | Student | Reading              |                        | School               |
+| brlevins | Barrie         | Employee    | Adult   | BoBo                 |                        |                      |
