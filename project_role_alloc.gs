@@ -4,7 +4,7 @@
 *
 *                                   Coert Vonk
 *                                 February 2019
-*              https://github.com/cvonk/gas-sheets-projectrolealloc/
+*              https://github.com/cvonk/gas-sheets-project_role_alloc/
 *
 *
 * DESCRIPTION:
@@ -124,17 +124,12 @@ var OnProjectRoleAlloc = {};
     lines.push(row);
   }
 
-  this.writeRawValues = function(lines, srcValues, actions, theValues) {
+  this.writeRawValues = function(lines, srcValues, actions) {
 
     var rowNr = 1;
     for each (var srcRow in srcValues) {
       for each (var action in actions) {
-        var row = [];
-        if (theValues != undefined) {
-          var prjName = srcRow[action[0]];
-          var prjTheme = this.getTheme(theValues, prjName);
-          row.push(prjTheme);
-        }
+        var row = [undefined];
         for each (var src in action) {
           row.push(srcRow[src]);
         }
@@ -149,28 +144,106 @@ var OnProjectRoleAlloc = {};
     }
   }
 
-  this.writeRawAlloc = function(lines) {
+  // if users work on >1 prject, divvy up their allocation evenly, except when
+  // project name ends in e..g "(75%)", then 75% will be allocated to that
+  // one project and the remainder spread evenly amoung other projects.
+  // removes the allocation percentage from prjName as well.
 
+  this.getAssignedAllocation = function(line, uname, prjName, prjColIdx) {
+    
+    var openBracket = prjName.lastIndexOf("(");
+    
+    if (prjName.substr(-2) == "%)" && openBracket > 0) {        
+      var newPrjName = prjName.substr(0, openBracket-1);  // remove e.g. "(45%)"
+      var str = prjName.substr(openBracket+1, prjName.length - openBracket - 3);
+      //line[prjColIdx] = newPrjName;
+      return [newPrjName, parseInt(str) / 100.0];
+    }
+    return [prjName, undefined];
+  }
+
+  // returns the ratio of time that a user spends on a specific project
+  
+  this.getPrjRatio = function(assignments, uname, prjName) {
+    
+    var prjCnt = 0, prjAssCnt = 0, prjAssVal = 0;      
+    for each (var assignment in assignments) {
+      prjCnt++;
+      if (assignment != undefined) {
+        prjAssCnt++;
+        prjAssVal += assignment;
+      }
+    }
+    if (prjAssVal > 100) {
+      throw("over 100% assigned to user (" +  ")");
+    }
+    if (assignments[prjName] != undefined) {
+      return assignments[prjName];
+    }
+    return (1 - prjAssVal) / (prjCnt - prjAssCnt);
+  }
+  
+  this.writeRawAllocColumn = function(lines) {
+    
+    // 2BD no literal column names
     var unameColIdx = lines[0].indexOf("Username");
     var ratioColIdx = lines[0].indexOf("Ratio");
+    var prjColIdx = lines[0].indexOf("Project Allocation");
+    
+    // get assigned prj percentages
+
+    var assigned = {};
+    for (var ii = 1; ii < lines.length; ii++) {
+      var line = lines[ii];
+      var uname = line[unameColIdx];
+      var prjName = line[prjColIdx];    
+      if (assigned[uname] == undefined) {
+        assigned[uname] = {};      
+      }
+      var ass;
+      [prjName, ass] = this.getAssignedAllocation(line, 
+                                                  line[unameColIdx], 
+                                                  line[prjColIdx], prjColIdx);
+      assigned[uname][prjName] = ass;      
+      line[prjColIdx] = prjName;
+    }
+
+    // fill in the ratio that a user spends on a specific project
     
     for (var ii = 1; ii < lines.length; ii++) {
-      var uname = lines[ii][unameColIdx];
-      var linesWithSameUname = lines.filter(function(row) { return row[unameColIdx] === uname }).length;
-      lines[ii][ratioColIdx] = 1 / linesWithSameUname;
+      var line = lines[ii];
+      var uname = line[unameColIdx];
+      var prjName = line[prjColIdx];
+      line[ratioColIdx] = this.getPrjRatio(assigned[uname], uname, prjName);
     }
   }
 
-  this.writeRaw = function(srcColumns, actions, srcValues, rawSheet, theValues) {
+  this.writeRawThemeColumn = function(lines, theValues) {
 
+    if (theValues == undefined) {
+      return;
+    }
+    var theColIdx = lines[0].indexOf("Theme");
+    var prjColIdx = lines[0].indexOf("Project Allocation");
+
+    for (var ii = 1; ii < lines.length; ii++) {
+      var line = lines[ii];
+      var prjTheme = this.getTheme(theValues, line[prjColIdx]);
+      line[theColIdx] = prjTheme;
+    }
+  }
+  
+  this.writeRaw = function(srcColumns, actions, srcValues, rawSheet, theValues) {
+    
     var lines = [];
     this.writeRawHeader(lines, theValues, srcColumns);
-    this.writeRawValues(lines, srcValues, actions, theValues);
-    this.writeRawAlloc(lines);
-
+    this.writeRawValues(lines, srcValues, actions);
+    this.writeRawAllocColumn(lines);
+    this.writeRawThemeColumn(lines, theValues);
+    
     rawSheet.getRange(1, 1, lines.length, lines[0].length).setValues(lines);
   }
-
+  
   this.getPivotTabelConfig = function(rawSheet, srcColumnLabels) {
     
     // API details at https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/pivot-tables
@@ -183,13 +256,8 @@ var OnProjectRoleAlloc = {};
       "rows": [{
         sourceColumnOffset: 0,
         showTotals: true,
-        //valueBucket: {}
         //label: "Something else instead of Theme",
-        sortOrder: "ASCENDING" /*,
-        valueMetadata: [{
-          "value": { "formulaValue": "true" },   // 2BD
-          "collapsed": true
-        }] */        
+        sortOrder: "ASCENDING"
       }],
       "columns": [],
       "values": [{
