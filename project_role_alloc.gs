@@ -113,19 +113,26 @@ var OnProjectRoleAlloc = {};
     return actions;
   }
 
-  this.getRawHeader = function(theValues, srcColumns) {
+  this.getRawHeader = function(srcColumnLabels, theValues, srcColumns) {
 
     var row = [];
     if (theValues != undefined) {
       row.push("Theme");
     }
-    row.push("Ratio");  // 2BD should be hardcoded here, but depend on something like actionLvlHasAssignedPercentages
-    for each (var column in srcColumns) {
-      row.push(column.label);
+
+    for each (var srcColumnLabel in srcColumnLabels) {
+
+      var showRatio = srcColumnLabel.substr(-1) == "*";
+      var lbl = srcColumnLabel;
+      if (showRatio) {
+        lbl = lbl.slice(0, -1);
+        row.push(lbl.trim() + "%");
+      }
+      row.push(lbl.trim());
     }
     return row;
   }
-
+  
   this.getRatio = function(srcRow, actions, idx, idxNr) {
     
     var assignedCnt = 0, assignedVal = 0, totalCnt = 0;
@@ -181,7 +188,7 @@ var OnProjectRoleAlloc = {};
   // returns updated lines
   //   lines = [["Theme", "Ratio", "Project Allocation", "Username", "Role"], [, 0.8, "School", "jvonk", "Student"], [, 0.2, "Java", "jvonk", "Student"], [, 0.5, "School", "svonk", "Student"], [, 0.5, "Reading", ...
 
-  this.writeRawValues = function(rawHeader, srcValues, actions) {
+  this.writeRawValues = function(srcValues, rawHeader, actions, theValues) {
 
     var lines = [];
     var actionLvlsWithAssignedPercentages = this.getActionIdxsThatHaveAssignedPercentages(srcValues, actions);    
@@ -189,11 +196,12 @@ var OnProjectRoleAlloc = {};
     var rowNr = 1;
     for each (var srcRow in srcValues) {
       
-      var ratioColIdx = rawHeader.indexOf("Ratio");
-      
       for each (var action in actions) {
-        var row = [,], alloc = 1, idxNr = 0;
-        
+
+        var row = [], alloc = 1, idxNr = 0;
+        if (theValues != undefined) {
+          row.push(undefined);
+        }
         for each (var idx in action) {
           var ratio = this.getRatio(srcRow, actions, idx, idxNr);
           
@@ -203,7 +211,11 @@ var OnProjectRoleAlloc = {};
           row.push(srcRow[idx.val]);
           idxNr++;
         }
-        if (row[2]) {        // 2BD shouldn't be hardcoded
+        
+        var cellsWithValues = row.filter(function(val) {
+          return val != "";
+        });
+        if (cellsWithValues.length == row.length) {
           lines.push(row);
           rowNr++;
         }
@@ -238,8 +250,17 @@ var OnProjectRoleAlloc = {};
     }
   }
   
-  this.getPivotTabelConfig = function(rawSheet, srcColumnLabels) {
+  this.getPivotTabelConfig = function(rawHeader, rawSheet, srcColumnLabels, theValues) {
     
+    // the raw (optionally) starts with a theme column => that goes in the first pivot row
+    // the last raw column => that goes to the pivot values
+    // remaining raw columns => go as pivot rows
+    var hasTheme = theValues != undefined;
+    var valCol = hasTheme ? 1 : 0;
+    var colIdx = rawHeader.length - 1;
+    var rowIdxStart = valCol + 1;
+    var rowIdxEnd = colIdx - 1;
+
     // API details at https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/pivot-tables
     var cfg = {
       "source": {
@@ -247,36 +268,33 @@ var OnProjectRoleAlloc = {};
         endRowIndex: rawSheet.getDataRange().getNumRows(),
         endColumnIndex: rawSheet.getDataRange().getNumColumns()
       },
-      "rows": [{
-        sourceColumnOffset: 0,
+      "rows": [],
+      "columns": [{
+        sourceColumnOffset: colIdx,
         showTotals: true,
-        //label: "Something else instead of Theme",
         sortOrder: "ASCENDING"
       }],
-      "columns": [],
       "values": [{
-        sourceColumnOffset: 1,   // 2BD not hardcoded
+        sourceColumnOffset: valCol,
         summarizeFunction: "SUM"
       }]
     };
-    
-    for (var ii = 1; ii <= srcColumnLabels.length; ii++) {
-      switch (ii) {
-        case srcColumnLabels.length:
-          cfg.columns.push({
-            sourceColumnOffset: ii + 1,
-            showTotals: true,
-            sortOrder: "ASCENDING"
-          });
-          break;
-        default:
-          cfg.rows.push({
-            sourceColumnOffset: ii + 1,
-            showTotals: true,
-            sortOrder: "ASCENDING"
-          });
-      }
+
+    if (hasTheme) {
+      cfg.rows.push({
+        sourceColumnOffset: 0,
+        showTotals: true,  //label: "Something else instead of Theme",
+        sortOrder: "ASCENDING"
+      });
     }
+    for (var ii = rowIdxStart; ii <= rowIdxEnd; ii++) {
+      cfg.rows.push({
+        sourceColumnOffset: ii,
+        showTotals: true,
+        sortOrder: "ASCENDING"
+      });
+    }
+    
     return cfg;
   }    
 
@@ -299,13 +317,13 @@ var OnProjectRoleAlloc = {};
     // https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined
   }    
   
-  this.createPivotTable = function(spreadsheet, srcColumns, srcColumnLabels, rawSheet, pvtSheetName) {
+  this.createPivotTable = function(spreadsheet, srcColumns, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues) {
 
     if (srcColumnLabels.length < 3) {
       return;
     }
     
-    var cfg = this.getPivotTabelConfig(rawSheet, srcColumnLabels);
+    var cfg = this.getPivotTabelConfig(rawHeader, rawSheet, srcColumnLabels, theValues);
     var pivotTblSheet = spreadsheet.insertSheet(pvtSheetName);
 
     return this.pivotTableUpdate(cfg, pivotTblSheet, spreadsheet);
@@ -383,8 +401,8 @@ var OnProjectRoleAlloc = {};
 
     // write the raw sheet (that drives the pivot table later)
 
-    var rawHeader = this.getRawHeader(theValues, srcColumns);
-    var rawValues = this.writeRawValues(rawHeader, srcValues, actions);
+    var rawHeader = this.getRawHeader(srcColumnLabels, theValues, srcColumns);
+    var rawValues = this.writeRawValues(srcValues, rawHeader, actions, theValues);
     var rawData = [rawHeader].concat(rawValues);
     this.writeRawThemeColumn(rawData, theValues, 2, 0);
     rawSheet.getRange(1, 1, rawData.length, rawData[0].length).setValues(rawData);
@@ -392,7 +410,7 @@ var OnProjectRoleAlloc = {};
     // update the pivot table (create if necessary)
 
     if (spreadsheet.getSheetByName(pvtSheetName) == null) {
-      this.createPivotTable(spreadsheet, srcColumns, srcColumnLabels, rawSheet, pvtSheetName);
+      this.createPivotTable(spreadsheet, srcColumns, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues);
     }
     var pvtSheet = spreadsheet.getSheetByName(pvtSheetName);
     this.updatePivotTable(spreadsheet, rawSheet, pvtSheet);
