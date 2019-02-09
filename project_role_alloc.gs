@@ -138,83 +138,56 @@ var OnProjectRoleAlloc = {};
     lines.push(row);
   }
 
-  // returns the ratio of time that a user spends on a specific project
-  
-  this.getPrjRatio = function(assignments, uname, prjName) {
+  this.getRatio = function(srcRow, actions, idx, idxNr) {
     
-    var prjCnt = 0, prjAssCnt = 0, prjAssVal = 0;      
-    for each (var assignment in assignments) {
-      prjCnt++;
-      if (assignment != undefined) {
-        prjAssCnt++;
-        prjAssVal += assignment;
+    var assignedCnt = 0, assignedVal = 0, totalCnt = 0;
+    for each (var act in actions) {        
+      if (act[idxNr].pct >= 0) {
+        var val = srcRow[act[idxNr].pct];
+        if (val) { // skip blank
+          assignedCnt++;
+          assignedVal += val;
+          if (assignedVal > 1) {
+            throw("over 100% assigned for (" + srcRow[0]  + ")");
+          }
+        }
+      }
+      if (srcRow[act[idxNr].val]) {
+        totalCnt++; // only count the columns with values
       }
     }
-    if (prjAssVal > 100) {
-      throw("over 100% assigned to user (" +  ")");
+    if (assignedCnt > 0) {
+      if (idx.pct >= 0) {
+        return srcRow[idx.pct];
+      } else {
+        return (1 - assignedVal) / (totalCnt - assignedCnt);
+      }            
     }
-    if (assignments[prjName] != undefined) {
-      return assignments[prjName];
-    }
-    return (1 - prjAssVal) / (prjCnt - prjAssCnt);
-  }
+    return 1.0 / totalCnt;
+  }  
   
+  this.getActionLvlsWithAssignedPercentages = function(srcValues, actions, idx) {
+    
+    var result = [];
+    for each (var srcRow in srcValues) {
+      for each (var action in actions) {  
+        var actionLvl = 0;
+        for each (var idx in action) {
+          if (idx.pct >= 0 && srcRow[idx.pct]) {
+            result.push(actionLvl);
+          }
+          actionLvl++;
+        }
+      }
+    }
+    return result;
+  }
   
   // if users work on >1 prject, divvy up their allocation evenly, except when
   // project name ends in e..g "(75%)", then 75% will be allocated to that
   // one project and the remainder spread evenly amoung other projects.
   // removes the allocation percentage from prjName as well.
-
-  this.getAssignedAllocation = function(line, uname, prjName, prjColIdx) {
-    
-    var openBracket = prjName.lastIndexOf("(");
-    
-    if (prjName.substr(-2) == "%)" && openBracket > 0) {        
-      var newPrjName = prjName.substr(0, openBracket-1);  // remove e.g. "(45%)"
-      var str = prjName.substr(openBracket+1, prjName.length - openBracket - 3);
-      //line[prjColIdx] = newPrjName;
-      return [newPrjName, parseInt(str) / 100.0];
-    }
-    return [prjName, undefined];
-  }
-
-
-  this.writeRawAllocColumn = function(lines) {
-    
-    // 2BD no literal column names
-    var unameColIdx = lines[0].indexOf("Username");
-    var ratioColIdx = lines[0].indexOf("Ratio");
-    var prjColIdx = lines[0].indexOf("Project Allocation");
-    
-    // get assigned prj percentages
-
-    var assigned = {};
-    for (var ii = 1; ii < lines.length; ii++) {
-      var line = lines[ii];
-      var uname = line[unameColIdx];
-      var prjName = line[prjColIdx];    
-      if (assigned[uname] == undefined) {
-        assigned[uname] = {};      
-      }
-      var ass;
-      [prjName, ass] = this.getAssignedAllocation(line, 
-                                                  line[unameColIdx], 
-                                                  line[prjColIdx], prjColIdx);
-      assigned[uname][prjName] = ass;      
-      line[prjColIdx] = prjName;
-    }
-
-    // fill in the ratio that a user spends on a specific project
-    
-    for (var ii = 1; ii < lines.length; ii++) {
-      var line = lines[ii];
-      var uname = line[unameColIdx];
-      var prjName = line[prjColIdx];
-      line[ratioColIdx] = this.getPrjRatio(assigned[uname], uname, prjName);
-    }
-  }
-
-  
+  //
   // e.g.
   //   lines = [["Theme", "Project Allocation", "Username", "Role", "Ratio"]]
   //   srcValues = [["jvonk", "Johan Vonk", "Employee", "Student", "School", 0.8, "Java"], ["svonk", "Sander Vonk", "Employee", "Student", "School", "", "Reading"], ["brlevins", "Barrie Levinson", "Employee", "Adult"...
@@ -225,71 +198,31 @@ var OnProjectRoleAlloc = {};
 
     // see if any action has percentages assigned
     
-    var actionLvlHasAssignedPercentages = [];    
-    for each (var srcRow in srcValues) {
-      for each (var action in actions) {  
-        var actionLvl = 0;
-        for each (var idx in action) {
-          if (idx.pct >= 0 && srcRow[idx.pct]) {
-            actionLvlHasAssignedPercentages.push(actionLvl);
-          }
-          actionLvl++;
-        }
-      }
-    }
+    var actionLvlsWithAssignedPercentages = this.getActionLvlsWithAssignedPercentages(srcValues, actions);    
         
     var rowNr = 1;
     for each (var srcRow in srcValues) {
-
-     var ratioColIdx = lines[0].indexOf("Ratio");
+      
+      var ratioColIdx = lines[0].indexOf("Ratio");
       
       for each (var action in actions) {
-        var row = [,];
-        var alloc = 1;
+        var row = [,], alloc = 1, idxNr = 0;
         
-        var idxNr = 0;
         for each (var idx in action) {
-
-          var assignedCnt = 0, assignedVal = 0, totalCnt = 0;
-          for each (var act in actions) {        
-            if (act[idxNr].pct >= 0) {
-              var val = srcRow[act[idxNr].pct];
-              if (val) { // skip blank
-                assignedCnt++;
-                assignedVal += val;
-                if (assignedVal > 1) {
-                  throw("over 100% assigned for (" + srcRow[0]  + ")");
-                }
-              }
-            }
-            if (srcRow[act[idxNr].val]) {
-              totalCnt++; // only count the columns with values
-            }
-          }
+          var ratio = this.getRatio(srcRow, actions, idx, idxNr);
           
-          // should really write whenever any >= 0
-          
-          var ratio = 1.0 / totalCnt;
-          if (assignedCnt > 0) {
-            if (idx.pct >= 0) {
-              ratio = srcRow[idx.pct];
-            } else {
-              ratio = (1 - assignedVal) / (totalCnt - assignedCnt);
-            }            
-          }
-          if( actionLvlHasAssignedPercentages.indexOf(idxNr) >= 0) {
+          if( actionLvlsWithAssignedPercentages.indexOf(idxNr) >= 0) {
             row.push(Number(ratio.toFixed(2)));  // hide math precision err
           }
           row.push(srcRow[idx.val]);
           idxNr++;
         }
-        if (row[2]) {        // 2BD shouldnt be hardcoded
+        if (row[2]) {        // 2BD shouldn't be hardcoded
           lines.push(row);
           rowNr++;
         }
       }
     }
-    return;
   }
   
   this.writeRawThemeColumn = function(lines, theValues) {
@@ -312,7 +245,6 @@ var OnProjectRoleAlloc = {};
     var lines = [];
     this.writeRawHeader(lines, theValues, srcColumns);
     this.writeRawValues(lines, srcValues, actions);
-    //this.writeRawAllocColumn(lines);
     this.writeRawThemeColumn(lines, theValues);
     
     rawSheet.getRange(1, 1, lines.length, lines[0].length).setValues(lines);
