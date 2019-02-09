@@ -50,7 +50,7 @@
 function onProjectRoleAlloc() {
 
   // Maps each src column label (srcColumnLabels) to the corresponding column index
-  // in the src.  Two special conditions:
+  // in the Src Sheet.  Two special conditions:
   //   1. If a label ends in '*', it matches any column in the src that starts with
   //      with that label.  E.g. (more about pct in expl.2)
   //        when 
@@ -98,7 +98,9 @@ function onProjectRoleAlloc() {
   // Walk the srcColumns to determine the actions needed to create the Raw Sheet.
   // E.g. at the root level
   //   when 
-  //     srcColumns = [{label:"Project Allocation", idx:[{val:4, pct:5}, {val:6, pct:-1}]}, {label:"Username", idx:[{val:0, pct:-1}]}, {label:"Role", idx:[{val:3, pct:-1}]}]
+  //     srcColumns = [{label:"Project Allocation", idx:[{val:4, pct:5}, {val:6, pct:-1}]}, 
+  //                   {label:"Username", idx:[{val:0, pct:-1}]}, 
+  //                   {label:"Role", idx:[{val:3, pct:-1}]}]
   //     action = []
   //     actions = []
   //   it returns
@@ -119,6 +121,12 @@ function onProjectRoleAlloc() {
   }
   
   // Returns the header row for the Raw Sheet
+  // E.g.
+  //   when
+  //     srcColumnLabels = ["Project Allocation*", "Username", "Role"]
+  //     theValues = [["Project", "Theme"],  ... ]
+  //   it returns
+  //     ["Theme", "Project Allocation%", "Project Allocation", "Username", "Role"]
   
   function _getRawHeader(srcColumnLabels, theValues) {
     
@@ -144,10 +152,16 @@ function onProjectRoleAlloc() {
   // If an action level has multiple source columns, e.g. a user works on >1
   // project, divvy up their allocation.  E.g.
   //   when
-  //     srcValues = [["jvonk", "Johan", "Employee", "Student", "School", 0.8, "Java"], ["svonk", "Sander", "Employee", "Student", "School", "", "Reading"], ["brlevins", "Barrie", "Employee", "Adult", "BoBo", "", ""]]
+  //     srcValues = [["jvonk", "Johan", "Employee", "Student", "School", 0.8, "Java"],
+  //                  ["svonk", "Sander", "Employee", "Student", "School", "", "Reading"],
+  //                  ["brlevins", "Barrie", "Employee", "Adult", "BoBo", "", ""]]
   //     actions = [[{val:4, pct:5}, {val:0, pct:-1}, {val:3, pct:-1}], [{val:6, pct:-1}, {}, {}]]
   //   it returns
-  //     lines = [[, 0.8, "School", "jvonk", "Student"], [, 0.2, "Java", "jvonk", "Student"], [, 0.5, "School", "svonk", "Student"], [, 0.5, "Reading", "svonk", "Student"], [, 1, "BoBo", "brlevins", "Adult"]]
+  //     lines = [[, 0.8, "School", "jvonk", "Student"],
+  //              [, 0.2, "Java", "jvonk", "Student"],
+  //              [, 0.5, "School", "svonk", "Student"],
+  //              [, 0.5, "Reading", "svonk", "Student"],
+  //              [, 1, "BoBo", "brlevins", "Adult"]]
   
   function _getRawValues(srcValues, theValues, actions) {
     
@@ -304,12 +318,14 @@ function onProjectRoleAlloc() {
     return Sheets.Spreadsheets.batchUpdate({"requests": [request]}, spreadsheet.getId());
   }
   
+  // Updates the source range for the pivot table.
+  // Instead of supplying a whole new pivot table, use the API to get the configuration
+  // of the exising Pivot Table, and update the source range
+  
   function _updatePivotTable(spreadsheet, rawSheet, pvtSheet) {
     
     var pvtTableSheetId = pvtSheet.getSheetId();
     
-    // instead of supplying a whole new pivot table, use the API to get the configuration
-    // of the exising Pivot Table, and update the source range
     
     try {
       var response = Sheets.Spreadsheets.get(spreadsheet.getId(), {
@@ -386,9 +402,9 @@ function onProjectRoleAlloc() {
     
     if (spreadsheet.getSheetByName(pvtSheetName) == null) {
       _createPivotTable(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues);
-    }
-    var pvtSheet = spreadsheet.getSheetByName(pvtSheetName);
-    _updatePivotTable(spreadsheet, rawSheet, pvtSheet);
+    } else {
+      _updatePivotTable(spreadsheet, rawSheet, spreadsheet.getSheetByName(pvtSheetName));
+    }      
   }
   
   _main(srcColumnLabels = ["Project Allocation*", "Username", "Role" ],
