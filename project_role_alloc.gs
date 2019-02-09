@@ -47,10 +47,7 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// update raw sheet based on src sheet
-
-var OnProjectRoleAlloc = {};
-(function () {
+function onProjectRoleAlloc() {
   
   // create an associative array that maps the "column label" to the "column index" in the src
   //   key = the column label,
@@ -63,7 +60,7 @@ var OnProjectRoleAlloc = {};
   //   // [{label:"Project Allocation", src:[4, 5]}, {label:"Username", src:[0]}, {label:"Role", src:[3]}]
   //   [{label:"Project Allocation", idx:[{val:4, pct:5}, {val:6, pct:-1}]}, {label:"Username", idx:[{val:0, pct:-1}]}, {label:"Role", idx:[{val:3, pct:-1}]}]
   
-  this.getSrcColumns = function(labels, srcHeader) {
+  function _getSrcColumns(labels, srcHeader) {
     
     String.prototype.startsWith = function(prefix) { 
       return this.indexOf(prefix) === 0; 
@@ -99,8 +96,8 @@ var OnProjectRoleAlloc = {};
   //  actions = []
   // will output [[{val:4, pct:5}, {val:0, pct:-1}, {val:3, pct:-1}], [{val:6, pct:-1}, {}, {}]]
   //   
-  this.walkSrcColumns = function(srcColumns, action, actions) {
-
+  function _walkSrcColumns(srcColumns, action, actions) {
+    
     if (srcColumns.length == 0) {
       actions.push(action);
       return;
@@ -108,20 +105,20 @@ var OnProjectRoleAlloc = {};
     for each (var idx in srcColumns[0].idx) {
       var actioncopy = action.slice();
       actioncopy.push(idx);
-      this.walkSrcColumns(srcColumns.slice(1), actioncopy, actions);
+      _walkSrcColumns(srcColumns.slice(1), actioncopy, actions);
     }
     return actions;
   }
-
-  this.getRawHeader = function(srcColumnLabels, theValues) {
-
+  
+  function _getRawHeader(srcColumnLabels, theValues) {
+    
     var row = [];
     if (theValues != undefined) {
       row.push("Theme");
     }
-
+    
     for each (var srcColumnLabel in srcColumnLabels) {
-
+      
       var showRatio = srcColumnLabel.substr(-1) == "*";
       var lbl = srcColumnLabel;
       if (showRatio) {
@@ -133,51 +130,6 @@ var OnProjectRoleAlloc = {};
     return row;
   }
   
-  this.getRatio = function(srcRow, actions, idx, idxNr) {
-    
-    var assignedCnt = 0, assignedVal = 0, totalCnt = 0;
-    for each (var act in actions) {        
-      if (act[idxNr].pct >= 0) {
-        var val = srcRow[act[idxNr].pct];
-        if (val) { // skip blank
-          assignedCnt++;
-          assignedVal += val;
-          if (assignedVal > 1) {
-            throw("over 100% assigned for (" + srcRow[0]  + ")");
-          }
-        }
-      }
-      if (srcRow[act[idxNr].val]) {
-        totalCnt++; // only count the columns with values
-      }
-    }
-    if (assignedCnt) {
-      if (idx.pct >= 0) {
-        return srcRow[idx.pct];
-      } else {
-        return (1 - assignedVal) / (totalCnt - assignedCnt);
-      }            
-    }
-    return 1.0 / totalCnt;
-  }  
-  
-  this.getActionIdxsThatHaveAssignedPercentages = function(srcValues, actions, idx) {
-    
-    var result = [];
-    for each (var srcRow in srcValues) {
-      for each (var action in actions) {  
-        var actionLvl = 0;
-        for each (var idx in action) {
-          if (idx.pct >= 0 && srcRow[idx.pct]) {
-            result.push(actionLvl);
-          }
-          actionLvl++;
-        }
-      }
-    }
-    return result;
-  }
-  
   // write the values to the raw sheet.
   // if users work on >1 prject, divvy up their allocation.
   //
@@ -187,23 +139,66 @@ var OnProjectRoleAlloc = {};
   //   actions = [[{val:4, pct:5}, {val:0, pct:-1}, {val:3, pct:-1}], [{val:6, pct:-1}, {}, {}]]
   // returns updated lines
   //   lines = [["Theme", "Ratio", "Project Allocation", "Username", "Role"], [, 0.8, "School", "jvonk", "Student"], [, 0.2, "Java", "jvonk", "Student"], [, 0.5, "School", "svonk", "Student"], [, 0.5, "Reading", ...
-
-  this.writeRawValues = function(srcValues, actions, theValues) {
-
+  
+  function _writeRawValues(srcValues, actions, theValues) {
+    
+    function __getRatio(srcRow, actions, idx, idxNr) {	    
+      var assignedCnt = 0, assignedVal = 0, totalCnt = 0;
+      for each (var act in actions) {        
+        if (act[idxNr].pct >= 0) {
+          var val = srcRow[act[idxNr].pct];
+          if (val) { // skip blank
+            assignedCnt++;
+            assignedVal += val;
+            if (assignedVal > 1) {
+              throw("over 100% assigned for (" + srcRow[0]  + ")");
+            }
+          }
+        }
+        if (srcRow[act[idxNr].val]) {
+          totalCnt++; // only count the columns with values
+        }
+      }
+      if (assignedCnt) {
+        if (idx.pct >= 0) {
+          return srcRow[idx.pct];
+        } else {
+          return (1 - assignedVal) / (totalCnt - assignedCnt);
+        }            
+      }
+      return 1.0 / totalCnt;
+    }  
+    
+    function __getActionIdxsThatHaveAssignedPercentages(srcValues, actions, idx) {
+      var result = [];
+      for each (var srcRow in srcValues) {
+        for each (var action in actions) {  
+          var actionLvl = 0;
+          for each (var idx in action) {
+            if (idx.pct >= 0 && srcRow[idx.pct]) {
+              result.push(actionLvl);
+            }
+            actionLvl++;
+          }
+        }
+      }
+      return result;
+    }
+    
     var lines = [];
-    var actionLvlsWithAssignedPercentages = this.getActionIdxsThatHaveAssignedPercentages(srcValues, actions);    
-        
+    var actionLvlsWithAssignedPercentages = __getActionIdxsThatHaveAssignedPercentages(srcValues, actions);    
+    
     var rowNr = 1;
     for each (var srcRow in srcValues) {
       
       for each (var action in actions) {
-
+        
         var row = [], alloc = 1, idxNr = 0;
         if (theValues != undefined) {
           row.push(undefined);
         }
         for each (var idx in action) {
-          var ratio = this.getRatio(srcRow, actions, idx, idxNr);
+          var ratio = __getRatio(srcRow, actions, idx, idxNr);
           
           if( actionLvlsWithAssignedPercentages.indexOf(idxNr) >= 0) {
             row.push(Number(ratio.toFixed(2)));  // hide math precision err
@@ -223,13 +218,13 @@ var OnProjectRoleAlloc = {};
     }
     return lines;
   }
-
+  
   // first row is supposed to be a header, and is skipped
   // reads the project name from the column with index "thePrjIdx", and write the
   // corresponding theme name to the map it to the column with index "theColIdx"
   
-  this.writeRawThemeColumn = function(lines, theValues, prjColIdx, theColIdx) {
-
+  function _writeRawThemeColumn(lines, theValues, prjColIdx, theColIdx) {
+    
     function _getTheme(theValues, prjName) {
       for each (var row in theValues) {
         if (row[0] == prjName) {
@@ -238,11 +233,9 @@ var OnProjectRoleAlloc = {};
       }
       return undefined;
     }
-    
     if (theValues == undefined) {
       return;
     }
-
     for (var ii = 1; ii < lines.length; ii++) {
       var line = lines[ii];
       var prjTheme = _getTheme(theValues, line[prjColIdx]);
@@ -250,7 +243,11 @@ var OnProjectRoleAlloc = {};
     }
   }
   
-  this.getPivotTabelConfig = function(rawHeader, rawSheet, theValues) {
+  function _createPivotTable(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues) {
+    
+    if (srcColumnLabels.length < 3) {
+      return;
+    }
     
     // the raw (optionally) starts with a theme column => that goes in the first pivot row
     // the last raw column => that goes to the pivot values
@@ -260,7 +257,6 @@ var OnProjectRoleAlloc = {};
     var colIdx = rawHeader.length - 1;
     var rowIdxStart = valCol + 1;
     var rowIdxEnd = colIdx - 1;
-
     // API details at https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/pivot-tables
     var cfg = {
       "source": {
@@ -279,7 +275,6 @@ var OnProjectRoleAlloc = {};
         summarizeFunction: "SUM"
       }]
     };
-
     if (hasTheme) {
       cfg.rows.push({
         sourceColumnOffset: 0,
@@ -295,10 +290,8 @@ var OnProjectRoleAlloc = {};
       });
     }
     
-    return cfg;
-  }    
-
-  this.pivotTableUpdate = function(cfg, pivotTblSheet, spreadsheet) {
+    var pivotTblSheet = spreadsheet.insertSheet(pvtSheetName);
+    
     var request = {
       "updateCells": {
         "rows": {
@@ -312,31 +305,18 @@ var OnProjectRoleAlloc = {};
         "fields": "pivotTable"
       }
     };
-    return Sheets.Spreadsheets.batchUpdate({"requests": [request]}, spreadsheet.getId());
     // Enable the Sheets API, or you get: Reference error: sheets is not defined
     // https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined
-  }    
-  
-  this.createPivotTable = function(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues) {
-
-    if (srcColumnLabels.length < 3) {
-      return;
-    }
-    
-    var cfg = this.getPivotTabelConfig(rawHeader, rawSheet, theValues);
-    var pivotTblSheet = spreadsheet.insertSheet(pvtSheetName);
-
-    return this.pivotTableUpdate(cfg, pivotTblSheet, spreadsheet);
+    return Sheets.Spreadsheets.batchUpdate({"requests": [request]}, spreadsheet.getId());
   }
-
-  this.updatePivotTable = function(spreadsheet, rawSheet, pvtSheet) {
-
+  
+  function _updatePivotTable(spreadsheet, rawSheet, pvtSheet) {
+    
     var pvtTableSheetId = pvtSheet.getSheetId();
-
-    // https://sites.google.com/site/scriptsexamples/learn-by-example/google-sheets-api/pivot
+    
     // instead of supplying a whole new pivot table, use the API to get the configuration
     // of the exising Pivot Table, and update the source range
-    //    
+    
     var fields = "sheets.data.rowData.values.pivotTable";
     try {
       var response = Sheets.Spreadsheets.get(spreadsheet.getId(), {ranges: "role-alloc", fields: fields});
@@ -348,7 +328,7 @@ var OnProjectRoleAlloc = {};
     
     var cfg = response.sheets[0].data[0].rowData[0].values[0].pivotTable;
     cfg.source.endRowIndex = rawSheet.getDataRange().getNumRows();
-
+    
     var request = {
       "updateCells": {
         "rows": {
@@ -362,22 +342,22 @@ var OnProjectRoleAlloc = {};
         "fields": "pivotTable"
       }
     };
-
+    
     Sheets.Spreadsheets.batchUpdate({"requests": [request]}, spreadsheet.getId());
   }
-
+  
   /***
-   * @param {string[]} srcColumnLabels Labels of columns in the source sheet that will be output to the raw sheet (labels may include '*' as a wild chard character at the end)
-   * @param {string}   srcSheetName    Name of the Source sheet that feeds the Raw sheet
-   * @param {string}   rawSheetName    Name of the Raw sheet that feeds the Pivot Table
-   * @param {string}   pvtSheetName    Name of the Pivot Table sheet
-   * @param {string}   theSheetName    Optional parameter to map Project Names to overarching Theme Names
-   */
-
-  this.main = function(srcColumnLabels, srcSheetName, pvtSheetName, theSheetName) {
-
+  * @param {string[]} srcColumnLabels Labels of columns in the source sheet that will be output to the raw sheet (labels may include '*' as a wild chard character at the end)
+  * @param {string}   srcSheetName    Name of the Source sheet that feeds the Raw sheet
+  * @param {string}   rawSheetName    Name of the Raw sheet that feeds the Pivot Table
+  * @param {string}   pvtSheetName    Name of the Pivot Table sheet
+  * @param {string}   theSheetName    Optional parameter to map Project Names to overarching Theme Names
+  */
+  
+  function _main(srcColumnLabels, srcSheetName, pvtSheetName, theSheetName) {
+    
     // open sheets; copy values
-
+    
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     
     var srcSheet = Common.sheetOpen(spreadsheet, sheetName = srcSheetName, minNrOfDataRows = 2, requireLabelInA1 = true );
@@ -392,37 +372,32 @@ var OnProjectRoleAlloc = {};
       var theSheet = Common.sheetOpen(spreadsheet, sheetName = theSheetName, minNrOfDataRows = 2, requireLabelInA1 = true );
       theValues = Common.getFilteredDataRange(theSheet);
     }
-
+    
     // create an array of actions
     // each action is a list of cells to copy from the Source Sheet
-
-    var srcColumns = this.getSrcColumns(srcColumnLabels, srcHeader);
-    var actions = this.walkSrcColumns(srcColumns, [], []);
-
+    
+    var srcColumns = _getSrcColumns(srcColumnLabels, srcHeader);
+    var actions = _walkSrcColumns(srcColumns, [], []);
+    
     // write the raw sheet (that drives the pivot table later)
-
-    var rawHeader = this.getRawHeader(srcColumnLabels, theValues);
-    var rawValues = this.writeRawValues(srcValues, actions, theValues);
+    
+    var rawHeader = _getRawHeader(srcColumnLabels, theValues);
+    var rawValues = _writeRawValues(srcValues, actions, theValues);
     var rawData = [rawHeader].concat(rawValues);
-    this.writeRawThemeColumn(rawData, theValues, 2, 0);
+    _writeRawThemeColumn(rawData, theValues, 2, 0);
     rawSheet.getRange(1, 1, rawData.length, rawData[0].length).setValues(rawData);
     
     // update the pivot table (create if necessary)
-
+    
     if (spreadsheet.getSheetByName(pvtSheetName) == null) {
-      this.createPivotTable(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues);
+      _createPivotTable(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues);
     }
     var pvtSheet = spreadsheet.getSheetByName(pvtSheetName);
-    this.updatePivotTable(spreadsheet, rawSheet, pvtSheet);
+    _updatePivotTable(spreadsheet, rawSheet, pvtSheet);
   }
-
-}).apply(OnProjectRoleAlloc);
-
-
-function onProjectRoleAlloc() {
-
-  OnProjectRoleAlloc.main(srcColumnLabels = ["Project Allocation*", "Username", "Role" ],
-                          srcSheetName = "persons",
-                          pvtSheetName = "role-alloc",
-                          theSheetName = "themes");
+  
+  _main(srcColumnLabels = ["Project Allocation*", "Username", "Role" ],
+        srcSheetName = "persons",
+        pvtSheetName = "role-alloc",
+        theSheetName = "themes");
 }
