@@ -113,7 +113,7 @@ var OnProjectRoleAlloc = {};
     return actions;
   }
 
-  this.getRawHeader = function(srcColumnLabels, theValues, srcColumns) {
+  this.getRawHeader = function(srcColumnLabels, theValues) {
 
     var row = [];
     if (theValues != undefined) {
@@ -188,7 +188,7 @@ var OnProjectRoleAlloc = {};
   // returns updated lines
   //   lines = [["Theme", "Ratio", "Project Allocation", "Username", "Role"], [, 0.8, "School", "jvonk", "Student"], [, 0.2, "Java", "jvonk", "Student"], [, 0.5, "School", "svonk", "Student"], [, 0.5, "Reading", ...
 
-  this.writeRawValues = function(srcValues, rawHeader, actions, theValues) {
+  this.writeRawValues = function(srcValues, actions, theValues) {
 
     var lines = [];
     var actionLvlsWithAssignedPercentages = this.getActionIdxsThatHaveAssignedPercentages(srcValues, actions);    
@@ -250,7 +250,7 @@ var OnProjectRoleAlloc = {};
     }
   }
   
-  this.getPivotTabelConfig = function(rawHeader, rawSheet, srcColumnLabels, theValues) {
+  this.getPivotTabelConfig = function(rawHeader, rawSheet, theValues) {
     
     // the raw (optionally) starts with a theme column => that goes in the first pivot row
     // the last raw column => that goes to the pivot values
@@ -317,13 +317,13 @@ var OnProjectRoleAlloc = {};
     // https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined
   }    
   
-  this.createPivotTable = function(spreadsheet, srcColumns, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues) {
+  this.createPivotTable = function(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues) {
 
     if (srcColumnLabels.length < 3) {
       return;
     }
     
-    var cfg = this.getPivotTabelConfig(rawHeader, rawSheet, srcColumnLabels, theValues);
+    var cfg = this.getPivotTabelConfig(rawHeader, rawSheet, theValues);
     var pivotTblSheet = spreadsheet.insertSheet(pvtSheetName);
 
     return this.pivotTableUpdate(cfg, pivotTblSheet, spreadsheet);
@@ -401,8 +401,8 @@ var OnProjectRoleAlloc = {};
 
     // write the raw sheet (that drives the pivot table later)
 
-    var rawHeader = this.getRawHeader(srcColumnLabels, theValues, srcColumns);
-    var rawValues = this.writeRawValues(srcValues, rawHeader, actions, theValues);
+    var rawHeader = this.getRawHeader(srcColumnLabels, theValues);
+    var rawValues = this.writeRawValues(srcValues, actions, theValues);
     var rawData = [rawHeader].concat(rawValues);
     this.writeRawThemeColumn(rawData, theValues, 2, 0);
     rawSheet.getRange(1, 1, rawData.length, rawData[0].length).setValues(rawData);
@@ -410,7 +410,7 @@ var OnProjectRoleAlloc = {};
     // update the pivot table (create if necessary)
 
     if (spreadsheet.getSheetByName(pvtSheetName) == null) {
-      this.createPivotTable(spreadsheet, srcColumns, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues);
+      this.createPivotTable(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues);
     }
     var pvtSheet = spreadsheet.getSheetByName(pvtSheetName);
     this.updatePivotTable(spreadsheet, rawSheet, pvtSheet);
