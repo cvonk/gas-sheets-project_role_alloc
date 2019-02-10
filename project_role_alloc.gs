@@ -215,6 +215,22 @@ function onPrjRoleAlloc(parameters) {
       }
       return result;
     }
+   
+    function __getActionLvlsSources(actions) {
+      var result = [];
+      for each (action in actions) {
+        for (ii = 0; ii < action.length; ii++) {
+          var idx = action[ii];
+          if (result[ii] == undefined) {
+            result[ii] = [];
+          }  
+          if (result[ii].indexOf(idx.val) < 0) {
+              result[ii].push(idx.val);
+          }
+        }          
+      }
+      return result;
+    }
     
     function __getTheme(theValues, prjName) {
       for each (var row in theValues) {
@@ -226,7 +242,7 @@ function onPrjRoleAlloc(parameters) {
     }
 
     var lines = [];
-    var actionLvlsWithAssignedPercentages = __getActionIdxsThatHaveAssignedPercentages(srcValues, actions);    
+    var actionLvlsSources = __getActionLvlsSources(actions);    
     
     var rowNr = 1;
     for each (var srcRow in srcValues) {
@@ -240,7 +256,7 @@ function onPrjRoleAlloc(parameters) {
         for each (var idx in action) {
           var ratio = __getRatio(srcRow, actions, idx, idxNr);
           
-          if( actionLvlsWithAssignedPercentages.indexOf(idxNr) >= 0) {
+          if (actionLvlsSources[idxNr].length > 1) {     // 2BD
             row.push(Number(ratio.toFixed(2)));  // hide math precision err
           }
           row.push(srcRow[idx.val]);
@@ -330,14 +346,14 @@ function onPrjRoleAlloc(parameters) {
   // Instead of supplying a whole new pivot table, use the API to get the configuration
   // of the exising Pivot Table, and update the source range
   
-  function _updatePivotTable(spreadsheet, rawSheet, pvtSheet) {
+  function _updatePivotTable(spreadsheet, rawSheet, pvtSheet, pvtSheetName) {
     
     var pvtTableSheetId = pvtSheet.getSheetId();
     
     
     try {
       var response = Sheets.Spreadsheets.get(spreadsheet.getId(), {
-        ranges: "role-alloc",
+        ranges: pvtSheetName,
         fields: "sheets.data.rowData.values.pivotTable"
       });
     } catch (e) {
@@ -414,7 +430,7 @@ function onPrjRoleAlloc(parameters) {
   if (spreadsheet.getSheetByName(parameters.pvtSheetName) == null) {
     _createPivotTable(spreadsheet, parameters.srcColumnLabels, rawHeader, rawSheet, parameters.pvtSheetName, theValues);
   } else {
-    _updatePivotTable(spreadsheet, rawSheet, spreadsheet.getSheetByName(parameters.pvtSheetName));
+    _updatePivotTable(spreadsheet, rawSheet, spreadsheet.getSheetByName(parameters.pvtSheetName), parameters.pvtSheetName);
   }      
 }
 
@@ -424,3 +440,4 @@ function onPrjRoleAlloc_dbg() {
                   pvtSheetName: "role-alloc",
                   theSheetName: "themes"});
 }
+
