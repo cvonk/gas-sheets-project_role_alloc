@@ -47,7 +47,15 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-function onProjectRoleAlloc() {
+/***
+ * @param {string[]} srcColumnLabels Labels of columns in the source sheet that will be output to the raw sheet (labels may include '*' as a wild chard character at the end)
+ * @param {string}   srcSheetName    Name of the Source sheet that feeds the Raw sheet
+ * @param {string}   rawSheetName    Name of the Raw sheet that feeds the Pivot Table
+ * @param {string}   pvtSheetName    Name of the Pivot Table sheet
+ * @param {string}   theSheetName    Optional parameter to map Project Names to overarching Theme Names
+ */
+
+function onPrjRoleAlloc(parameters) {
 
   // Maps each src column label (srcColumnLabels) to the corresponding column index
   // in the Src Sheet.  Two special conditions:
@@ -357,58 +365,62 @@ function onProjectRoleAlloc() {
     
     Sheets.Spreadsheets.batchUpdate({"requests": [request]}, spreadsheet.getId());
   }
+
+  // validate parameters
   
-  /***
-  * @param {string[]} srcColumnLabels Labels of columns in the source sheet that will be output to the raw sheet (labels may include '*' as a wild chard character at the end)
-  * @param {string}   srcSheetName    Name of the Source sheet that feeds the Raw sheet
-  * @param {string}   rawSheetName    Name of the Raw sheet that feeds the Pivot Table
-  * @param {string}   pvtSheetName    Name of the Pivot Table sheet
-  * @param {string}   theSheetName    Optional parameter to map Project Names to overarching Theme Names
-  */
+  if (parameters.srcColumnLabels == undefined ||
+      parameters.srcSheetName == undefined ||
+      parameters.pvtSheetName == undefined) {
+    throw("invalid parameters to onPrjRoleAlloc()");
+  }
+  if (typeof parameters.srcColumnLabels !== "object" ||
+      typeof parameters.srcSheetName !== "string" ||
+      typeof parameters.pvtSheetName !== "string" ) {
+    throw("invalid parameters type to onPrjRoleAlloc()");
+  }
+
+  // open sheets; copy values
   
-  function _main(srcColumnLabels, srcSheetName, pvtSheetName, theSheetName) {
-    
-    // open sheets; copy values
-    
-    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    
-    var srcSheet = Common.sheetOpen(spreadsheet, sheetName = srcSheetName, minNrOfDataRows = 2, requireLabelInA1 = true );
-    var srcValues = Common.getFilteredDataRange(srcSheet);
-    var srcHeader = srcValues.shift();
-    
-    var rawSheetName = pvtSheetName + "-raw";
-    var rawSheet = Common.sheetCreate(spreadsheet, sheetName = rawSheetName, overwriteSheet = true).clear();
-    
-    var theValues = undefined;
-    if (theSheetName != undefined) {
-      var theSheet = Common.sheetOpen(spreadsheet, sheetName = theSheetName, minNrOfDataRows = 2, requireLabelInA1 = true );
-      theValues = Common.getFilteredDataRange(theSheet);
-    }
-    
-    // create an array of actions
-    // each action is a list of cells to copy from the Source Sheet
-    
-    var srcColumns = _getSrcColumns(srcColumnLabels, srcHeader);
-    var actions = _getActions(srcColumns, [], []);
-    
-    // write the raw sheet (that drives the pivot table later)
-    
-    var rawHeader = _getRawHeader(srcColumnLabels, theValues);
-    var rawValues = _getRawValues(srcValues, theValues, actions);
-    var rawData = [rawHeader].concat(rawValues);
-    rawSheet.getRange(1, 1, rawData.length, rawData[0].length).setValues(rawData);
-    
-    // update the pivot table (create if necessary)
-    
-    if (spreadsheet.getSheetByName(pvtSheetName) == null) {
-      _createPivotTable(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues);
-    } else {
-      _updatePivotTable(spreadsheet, rawSheet, spreadsheet.getSheetByName(pvtSheetName));
-    }      
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  
+  var srcSheet = Common.sheetOpen(spreadsheet, parameters.srcSheetName, 2, true );
+  var srcValues = Common.getFilteredDataRange(srcSheet);
+  var srcHeader = srcValues.shift();
+  
+  var rawSheetName = parameters.pvtSheetName + "-raw";
+  var rawSheet = Common.sheetCreate(spreadsheet, rawSheetName, true).clear();
+  
+  var theValues = undefined;
+  if (parameters.theSheetName != undefined) {
+    var theSheet = Common.sheetOpen(spreadsheet, parameters.theSheetName, 2, true );
+    theValues = Common.getFilteredDataRange(theSheet);
   }
   
-  _main(srcColumnLabels = ["Project Allocation*", "Username", "Role" ],
-        srcSheetName = "persons",
-        pvtSheetName = "role-alloc",
-        theSheetName = "themes");
+  // create an array of actions
+  // each action is a list of cells to copy from the Source Sheet
+  
+  var srcColumns = _getSrcColumns(parameters.srcColumnLabels, srcHeader);
+  var actions = _getActions(srcColumns, [], []);
+  
+  // write the raw sheet (that drives the pivot table later)
+  
+  var rawHeader = _getRawHeader(parameters.srcColumnLabels, theValues);
+  var rawValues = _getRawValues(srcValues, theValues, actions);
+  var rawData = [rawHeader].concat(rawValues);
+  rawSheet.getRange(1, 1, rawData.length, rawData[0].length).setValues(rawData);
+  
+  // update the pivot table (create if necessary)
+  
+  if (spreadsheet.getSheetByName(parameters.pvtSheetName) == null) {
+    _createPivotTable(spreadsheet, parameters.srcColumnLabels, rawHeader, rawSheet, parameters.pvtSheetName, theValues);
+  } else {
+    _updatePivotTable(spreadsheet, rawSheet, spreadsheet.getSheetByName(parameters.pvtSheetName));
+  }      
+}
+
+function onPrjRoleAlloc_dbg() {
+  onPrjRoleAlloc({srcColumnLabels: ["Project Allocation*", "Username", "Role" ],
+                  srcSheetName: "persons",
+                  pvtSheetName: "role-alloc",
+                  theSheetName: "themes"});
 }
