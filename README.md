@@ -42,24 +42,19 @@ Starting with the projects names, users and their roles in sheet *persons*.  Not
   
 ### Run the script
 
-  Either from the script editor ("Tools > Script Editor), or by adding a
-  little bit of code to create a menu item, such as 
+  Create a script such as `onopen.gs` that contains an `opOpen()` function to add an
+  item to the Google Scripts menu bar.  Remember to fill in your `srcColumnLabels` and
+  sheet names.  
 
 ```javascript
+    function onOpen_prjRoleAlloc() {
+      onPrjRoleAlloc({srcColumnLabels: ["Project Allocation*", "Username", "Role" ],
+                     srcSheetName: "persons",
+                     pvtSheetName: "role-alloc"});
     function onOpen() {
       SpreadsheetApp.getUi()
-         .createMenu("CUSTOM")
-         .addItem("Project role alloc", "onProjectRoleAlloc").addToUi();
-    }
-```
-
-  The sheet names are declared at the end of the script in
-
-```javascript
-    function onProjectRoleAlloc() {
-      OnProjectRoleAlloc.main(srcColumnLabels = ["Project*", "Username", "Role" ],
-                              srcSheetName = "persons",
-                              pvtSheetName = "role-alloc");
+         .createMenu("YourName")
+         .addItem("Merge with go-persons example1", 'onOpen_prjRoleAlloc').addToUi();
     }
 ```
 
@@ -125,13 +120,21 @@ In this example we show that projects can be grouped together into themes.
 
 ### Run the script
 
-  This time, we give the `OnPivot.main()` an extra parameter specifying the *themes* sheet name.
+  This time, we pass an extra parameter to `OnPivot.main()` that specifies the *themes* sheet name.
+  
+  Change the `onopen.gs` script from example 1, to include the name of the Themes Sheet.  
 
 ```javascript
-    onProjectRoleAlloc.main(srcColumnLabels = ["Project*", "Username", "Role" ],
-                            srcSheetName = "persons",
-                            pvtSheetName = "role-alloc",
-                            theSheetName = "themes");
+    function onOpen_prjRoleAlloc() {
+      onPrjRoleAlloc({srcColumnLabels: ["Project Allocation*", "Username", "Role" ],
+                     srcSheetName: "persons",
+                     pvtSheetName: "role-alloc",
+                     theSheetName: "themes"});
+    function onOpen() {
+      SpreadsheetApp.getUi()
+         .createMenu("YourName")
+         .addItem("Merge with go-persons example1", 'onOpen_prjRoleAlloc').addToUi();
+    }
 ```
 
 ### Intermetiate output
