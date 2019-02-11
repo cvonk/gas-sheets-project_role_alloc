@@ -275,12 +275,72 @@ function onPrjRoleAlloc(parameters) {
     return lines;
   }
   
+  // Enable the Sheets API, or you get: Reference error: sheets is not defined
+  // https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined
   function _createPivotTable(spreadsheet, srcColumnLabels, rawHeader, rawSheet, pvtSheetName, theValues) {
     
     if (srcColumnLabels.length < 3) {
       return;
     }
     
+    var pivotTblSheet = spreadsheet.insertSheet(pvtSheetName);
+
+/*    
+    // conditional formatting
+    var myRange = {
+      "sheetId": pivotTblSheet.getSheetId(),
+      "startRowIndex": 0,
+      "endRowIndex": 50,
+      "startColumnIndex": 0,
+      "endColumnIndex": 10
+    };
+
+    var requests = [
+      {
+        'addConditionalFormatRule': {
+          'index': 0,
+          'rule': { 
+            'ranges': [myRange],
+            "booleanRule": {
+              "condition": {
+                "type": "CUSTOM_FORMULA",
+                "values": [{"userEnteredValue": "=AND(MATCH(RIGHT(OFFSET($A$1,ROW()-1,0),5), \"Total\"), NOT(ISBLANK(OFFSET($A$1,1,COLUMN()-1))))"}]
+              },
+              "format": {
+                "backgroundColor": {
+                  "red": 0.7176471,
+                  "green": 0.88235295,
+                  "blue": 0.8039216
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        'addConditionalFormatRule': {
+          'index': 0,
+          'rule': { 
+            'ranges': [myRange],
+            "booleanRule": {
+              "condition": {
+                "type": "CUSTOM_FORMULA",
+                "values": [{"userEnteredValue": "=AND(MATCH(OFFSET($A$1,ROW()-1,0), \"Theme\"), NOT(ISBLANK(OFFSET($A$1,1,COLUMN()-1))))"}]
+              },
+              "format": {
+                "backgroundColor": {"red": 0.95686275, "green": 0.78039217, "blue": 0.7647059
+                                   }
+              }
+            }
+          }
+        }
+      }];
+    
+    var dbg = Sheets.Spreadsheets.batchUpdate({"requests": requests}, spreadsheet.getId());
+*/
+
+    // add pivot table
+    //
     // the raw (optionally) starts with a theme column => that goes in the first pivot row
     // the last raw column => that goes to the pivot values
     // remaining raw columns => go as pivot rows
@@ -289,6 +349,7 @@ function onPrjRoleAlloc(parameters) {
     var colIdx = rawHeader.length - 1;
     var rowIdxStart = valCol + 1;
     var rowIdxEnd = colIdx - 1;
+    
     // API details at https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/pivot-tables
     var cfg = {
       "source": {
@@ -321,10 +382,8 @@ function onPrjRoleAlloc(parameters) {
         sortOrder: "ASCENDING"
       });
     }
-    
-    var pivotTblSheet = spreadsheet.insertSheet(pvtSheetName);
-    
-    var request = {
+
+    var request = [{
       "updateCells": {
         "rows": {
           "values": [{
@@ -336,10 +395,8 @@ function onPrjRoleAlloc(parameters) {
         },
         "fields": "pivotTable"
       }
-    };
-    // Enable the Sheets API, or you get: Reference error: sheets is not defined
-    // https://stackoverflow.com/questions/45625971/referenceerror-sheets-is-not-defined
-    return Sheets.Spreadsheets.batchUpdate({"requests": [request]}, spreadsheet.getId());
+    }];
+    return Sheets.Spreadsheets.batchUpdate({"requests": request}, spreadsheet.getId());
   }
   
   // Updates the source range for the pivot table.
