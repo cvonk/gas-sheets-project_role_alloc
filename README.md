@@ -1,5 +1,9 @@
 # Project Role Allocations (Google Apps Script for Sheets)
 
+[![GitHub Discussions](https://img.shields.io/github/discussions/cvonk/gas-sheets-project_role_alloc)](https://github.com/cvonk/gas-sheets-project_role_alloc/discussions)
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/cvonk/gas-sheets-project_role_alloc)
+![GitHub](https://img.shields.io/github/license/cvonk/gas-sheets-project_role_alloc)
+
 Create project role allocation pivot table based on projects names, users and their roles.
 
 ## Use
